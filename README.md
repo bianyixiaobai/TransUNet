@@ -1,8 +1,11 @@
 # TransUNet
+
 This repo holds code for [TransUNet: Transformers Make Strong Encoders for Medical Image Segmentation](https://arxiv.org/pdf/2102.04306.pdf)
 
 ## 📰 News
+
 - [7/26/2024] TransUNet, which supports both 2D and 3D data and incorporates a Transformer encoder and decoder, has been featured in the journal Medical Image Analysis ([link](https://www.sciencedirect.com/science/article/pii/S1361841524002056)).
+
 ```bibtex
 @article{chen2024transunet,
   title={TransUNet: Rethinking the U-Net architecture design for medical image segmentation through the lens of transformers},
@@ -16,18 +19,19 @@ This repo holds code for [TransUNet: Transformers Make Strong Encoders for Medic
 
 - [10/15/2023] 🔥 3D version of TransUNet is out! Our 3D TransUNet surpasses nn-UNet with 88.11% Dice score on the BTCV dataset and outperforms the top-1 solution in the BraTs 2021 challenge and secure the second place in BraTs 2023 challenge. Please take a look at the [code](https://github.com/Beckschen/3D-TransUNet/tree/main) and [paper](https://arxiv.org/abs/2310.07781).
 
-
 ## Usage
 
 ### 1. Download Google pre-trained ViT models
+
 * [Get models in this link](https://console.cloud.google.com/storage/vit_models/): R50-ViT-B_16, ViT-B_16, ViT-L_16...
+
 ```bash
 wget https://storage.googleapis.com/vit_models/imagenet21k/{MODEL_NAME}.npz &&
 mkdir ../model/vit_checkpoint/imagenet21k &&
 mv {MODEL_NAME}.npz ../model/vit_checkpoint/imagenet21k/{MODEL_NAME}.npz
 ```
 
-[Update 2026/02] The official ViT weights appear to have expired. 
+[Update 2026/02] The official ViT weights appear to have expired.
 You can still download a copy from the [project folder](https://drive.google.com/drive/folders/1ACJEoTp-uqfFJ73qS3eUObQh52nGuzCd?usp=sharing) (same to BTCV preprocessed data). After extraction, find the file at:
 `../model/vit_checkpoint/imagenet21k/R50+ViT-B_16.npz`
 
@@ -54,12 +58,12 @@ python test.py --dataset Synapse --vit_name R50-ViT-B_16
 ```
 
 ## Reference
+
 * [Google ViT](https://github.com/google-research/vision_transformer)
 * [ViT-pytorch](https://github.com/jeonsworld/ViT-pytorch)
 * [segmentation_models.pytorch](https://github.com/qubvel/segmentation_models.pytorch)
 
 ## Citations
-
 
 ```bibtex
 @article{chen2021transunet,
