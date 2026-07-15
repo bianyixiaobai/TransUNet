@@ -1,0 +1,59 @@
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# ============ 训练产物（生成在 ../model/，但项目内也有可能跑出来） ============
+*.pth
+*.pt
+*.ckpt
+runs/
+logs/
+*.log
+nohup.out
+
+# ============ TensorBoard ============
+events.out.tfevents.*
+tb_logs/
+
+# ============ IDE / 编辑器 ============
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============ 数据 & 权重（虽然按项目结构在仓库外，但保险起见也写上） ============
+../data/
+../model/
+
+# ============ 数据 & 权重（如果将来你不小心把项目放到 yinzhihan 根下） ============
+data/
+model/
+datasets/**/*.npz
+datasets/**/*.npy
+datasets/**/*.h5
+
+# ============ 临时文件 ============
+*.tmp
+*.bak
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# ============ Jupyter ============
+.ipynb_checkpoints/
+*.ipynb
+
+# ============ OS ============
+.DS_Store
+desktop.ini
+
+# ============ 一些虚拟环境 ============
+venv/
+env/
+.venv/
