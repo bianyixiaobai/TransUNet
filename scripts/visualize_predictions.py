@@ -41,7 +41,12 @@ WORKSPACE = os.path.dirname(PROJECT_ROOT)  # /media/ubuntu/Student/yinzhihan
 PRED_DIR = os.path.join(WORKSPACE, "predictions",
                        "TU_Synapse224",
                        "TU_pretrain_R50-ViT-B_16_skip3_epo150_bs24_224")
-OUT_DIR  = os.path.join(WORKSPACE, "visualizations")
+
+# 把可视化输出镜像到 visualizations/<镜像 predictions 的子路径>/
+#   predictions/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip3_epo150_bs24_224/...
+#   -> visualizations/TU_Synapse224/TU_pretrain_R50-ViT-B_16_skip3_epo150_bs24_224/...
+_REL = os.path.relpath(PRED_DIR, os.path.join(WORKSPACE, "predictions"))
+OUT_DIR = os.path.join(WORKSPACE, "visualizations", _REL)
 
 # 9 类器官配色（对比度高、颜色盲友好）
 ORGAN_COLORS = [
@@ -171,10 +176,11 @@ def main() -> None:
         except FileNotFoundError as e:
             print(f"⚠ 跳过 {case}: {e}")
 
-    plot_legend(os.path.join(OUT_DIR, "legend.png"))
+    plot_legend(os.path.join(OUT_DIR, "_legend.png"))
 
     print("\n=== 完成 ===")
-    print(f"所有 PNG 已生成在 {OUT_DIR}")
+    print(f"所有 PNG 已生成在: {OUT_DIR}")
+    print(f"对应训练权重路径 : {PRED_DIR}")
     print("用文件管理器打开 .png 即可查看效果。")
 
 

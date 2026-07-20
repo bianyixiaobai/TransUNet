@@ -51,7 +51,23 @@ if [ -d "${SRC}/TransUNet/test_log" ]; then
     echo "  ✓ logs/test.log"
 fi
 
-# 5. 写一个 README 总结
+# 5. 可视化 PNG（新结构：visualizations/TU_Synapse224/<snapshot>/）
+#    兼容旧结构：visualizations/*.png
+VIZ_NESTED="${SRC}/visualizations/TU_Synapse224/${TRAIN_DIR_NAME}"
+VIZ_OLD="${SRC}/visualizations"
+if [ -d "${VIZ_NESTED}" ]; then
+    mkdir -p "${EXP_DIR}/visualizations"
+    cp "${VIZ_NESTED}"/*.png "${EXP_DIR}/visualizations/" 2>/dev/null
+    N_VIZ=$(ls "${EXP_DIR}/visualizations/"*.png 2>/dev/null | wc -l)
+    echo "  ✓ visualizations/  (${N_VIZ} 个 PNG, 镜像 predictions 子目录)"
+elif [ -d "${VIZ_OLD}" ]; then
+    mkdir -p "${EXP_DIR}/visualizations"
+    cp "${VIZ_OLD}"/*.png "${EXP_DIR}/visualizations/" 2>/dev/null
+    N_VIZ=$(ls "${EXP_DIR}/visualizations/"*.png 2>/dev/null | wc -l)
+    [ "$N_VIZ" -gt 0 ] && echo "  ✓ visualizations/  (${N_VIZ} 个 PNG)"
+fi
+
+# 6. 写一个 README 总结
 cat > "${EXP_DIR}/README.md" << INNER_EOF
 # TransUNet Synapse 训练记录
 
@@ -92,11 +108,21 @@ cat > "${EXP_DIR}/README.md" << INNER_EOF
   - \`*_pred.nii.gz\` - 模型预测
 - \`logs/train.log\` - 训练日志
 - \`logs/test.log\` - 测试日志
+- \`visualizations/*.png\` - CT/GT/Pred 可视化对比图
 
 ## 可视化
 
-用 ITK-SNAP 打开 \`predictions/caseXXXX_img.nii.gz\` 作为主图像，
-然后加载 \`*_gt.nii.gz\` 和 \`*_pred.nii.gz\` 作为 segmentation 标签对比。
+### 方式 1: PNG 对比图（推荐，无需任何软件）
+
+直接打开 \`visualizations/caseXXXX_compare.png\`，每张图是 3×4 网格：
+- 行 = CT / GT / Pred
+- 列 = 4 张代表性切片
+- 颜色对应器官：见 \`visualizations/_legend.png\`
+
+### 方式 2: 原始 .nii.gz（用 ITK-SNAP / 3D Slicer）
+
+打开 \`predictions/caseXXXX_img.nii.gz\` 作为主图像，
+再加载 \`*_gt.nii.gz\` 和 \`*_pred.nii.gz\` 作为 segmentation 标签对比。
 INNER_EOF
 echo "  ✓ README.md"
 
