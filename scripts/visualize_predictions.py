@@ -30,6 +30,25 @@ matplotlib.use('Agg')  # 无显示器环境必须
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
+# 中文字体配置（按系统优先级尝试，找到第一个能用的）
+try:
+    from matplotlib import font_manager
+    _candidates = [
+        "WenQuanYi Zen Hei",   # fonts-wqy-zenhei
+        "Noto Sans CJK SC",    # fonts-noto-cjk
+        "WenQuanYi Micro Hei",
+        "SimHei",
+        "Microsoft YaHei",
+    ]
+    _available = {f.name for f in font_manager.fontManager.ttflist}
+    for _name in _candidates:
+        if _name in _available:
+            plt.rcParams["font.sans-serif"] = [_name]
+            break
+    plt.rcParams["axes.unicode_minus"] = False
+except Exception:
+    pass
+
 
 # ============================================================
 # 路径配置（与你的实际目录对应，相对项目根）
