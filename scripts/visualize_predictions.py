@@ -91,6 +91,62 @@ def check_predictions_exist() -> bool:
     return True
 
 
+def parse_test_log() -> dict:
+    """
+    从 test.log 解析每个 case 的 Dice。
+    期望格式: 'idx 0 case case0008 mean_dice 0.645844 mean_hd95 13.871876'
+    返回: {case_name: mean_dice}
+    """
+    # test_log 默认在 TransUNet/test_log/ 下
+    test_log_dir = os.path.join(PROJECT_ROOT, "test_log")
+    result = {}
+    if not os.path.isdir(test_log_dir):
+        return result
+    for fname in os.listdir(test_log_dir):
+        if not fname.endswith(".txt"):
+            continue
+        fpath = os.path.join(test_log_dir, fname)
+        with open(fpath, "r", errors="ignore") as f:
+            for line in f:
+                if "mean_dice" in line and "case" in line:
+                    parts = line.split()
+                    # 找 "case" 后面那个就是 case 名
+                    try:
+                        i = parts.index("case")
+                        case_name = parts[i + 1]
+                        # 找 mean_dice 后面的数
+                        j = parts.index("mean_dice")
+                        dice = float(parts[j + 1])
+                        result[case_name] = dice
+                    except (ValueError, IndexError):
+                        continue
+    return result
+
+
+def pick_cases_by_dice(test_dice: dict) -> list:
+    """
+    从 test_dice 自动选 best / mid / worst 三个 case。
+
+    返回: [(case_name, dice, tag), ...]
+    """
+    if not test_dice:
+        return []
+
+    sorted_cases = sorted(test_dice.items(), key=lambda kv: kv[1], reverse=True)
+    n = len(sorted_cases)
+
+    best = sorted_cases[0]
+    worst = sorted_cases[-1]
+    # 中位数（偶数个则取中间偏右的那个）
+    mid = sorted_cases[n // 2]
+
+    return [
+        (best[0],  best[1],  "Best"),
+        (mid[0],   mid[1],   "Mid"),
+        (worst[0], worst[1], "Hard"),
+    ]
+
+
 def load_case(case: str):
     """读取一个 case 的 img / gt / pred。"""
     img_path  = os.path.join(PRED_DIR, f"{case}_img.nii.gz")
@@ -162,16 +218,28 @@ def main() -> None:
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    # 选 3 个代表 case：好 / 中 / 差（来自你的测试结果）
-    cases = [
-        ("case0035", "Best (Dice 0.890)"),
-        ("case0001", "Mid  (Dice 0.727)"),
-        ("case0003", "Hard (Dice 0.566)"),
-    ]
+    # 从 test.log 自动解析每个 case 的 Dice
+    test_dice = parse_test_log()
+    if test_dice:
+        print(f"✓ 从 test.log 解析到 {len(test_dice)} 个 case 的 Dice")
+    else:
+        print("⚠ 未找到 test.log，将跳过可视化（test.log 是自动选 case 的依据）")
+        print("   请先跑：python test.py --dataset Synapse --vit_name R50-ViT-B_16 "
+              "--max_epochs 150 --batch_size 24 --is_savenii")
+        sys.exit(1)
 
-    for case, label in cases:
+    # 自动选 best / mid / worst 三个 case
+    cases = pick_cases_by_dice(test_dice)
+    print()
+    print("选定的 3 个 case:")
+    for case, dice, tag in cases:
+        print(f"  {tag:5s}  {case}  Dice {dice:.3f}")
+
+    print()
+    for case, dice, tag in cases:
+        label = f"{tag} (Dice {dice:.3f})"
         try:
-            out = os.path.join(OUT_DIR, f"{case}_compare.png")
+            out = os.path.join(OUT_DIR, f"{case}_{tag.lower()}_compare.png")
             plot_one_case(case, label, out)
         except FileNotFoundError as e:
             print(f"⚠ 跳过 {case}: {e}")
