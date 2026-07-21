@@ -96,30 +96,44 @@ def parse_test_log() -> dict:
     从 test.log 解析每个 case 的 Dice。
     期望格式: 'idx 0 case case0008 mean_dice 0.645844 mean_hd95 13.871876'
     返回: {case_name: mean_dice}
+
+    查找顺序（找到第一个非空就返回）：
+    1. TransUNet/test_log/  (test.py 默认输出)
+    2. experiments/transunet_*/logs/test.log  (归档脚本可能已搬走)
     """
-    # test_log 默认在 TransUNet/test_log/ 下
-    test_log_dir = os.path.join(PROJECT_ROOT, "test_log")
+    candidates = [
+        os.path.join(PROJECT_ROOT, "test_log"),
+        os.path.join(WORKSPACE, "experiments"),
+    ]
     result = {}
-    if not os.path.isdir(test_log_dir):
-        return result
-    for fname in os.listdir(test_log_dir):
-        if not fname.endswith(".txt"):
+    for log_dir in candidates:
+        if not os.path.isdir(log_dir):
             continue
-        fpath = os.path.join(test_log_dir, fname)
-        with open(fpath, "r", errors="ignore") as f:
-            for line in f:
-                if "mean_dice" in line and "case" in line:
-                    parts = line.split()
-                    # 找 "case" 后面那个就是 case 名
-                    try:
-                        i = parts.index("case")
-                        case_name = parts[i + 1]
-                        # 找 mean_dice 后面的数
-                        j = parts.index("mean_dice")
-                        dice = float(parts[j + 1])
-                        result[case_name] = dice
-                    except (ValueError, IndexError):
-                        continue
+        # experiments/ 下要找的是 */logs/test.log；test_log/ 下是 *.txt
+        txt_files = []
+        if os.path.basename(log_dir) == "test_log":
+            txt_files = [os.path.join(log_dir, f) for f in os.listdir(log_dir) if f.endswith(".txt")]
+        else:
+            for exp in os.listdir(log_dir):
+                p = os.path.join(log_dir, exp, "logs", "test.log")
+                if os.path.isfile(p):
+                    txt_files.append(p)
+                    break  # 找最新的一个就行
+        for fpath in txt_files:
+            with open(fpath, "r", errors="ignore") as f:
+                for line in f:
+                    if "mean_dice" in line and "case" in line:
+                        parts = line.split()
+                        try:
+                            i = parts.index("case")
+                            case_name = parts[i + 1]
+                            j = parts.index("mean_dice")
+                            dice = float(parts[j + 1])
+                            result[case_name] = dice
+                        except (ValueError, IndexError):
+                            continue
+        if result:
+            return result
     return result
 
 
