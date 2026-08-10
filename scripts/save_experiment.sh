@@ -98,39 +98,35 @@ N_VIZ=$(ls "${EXP_DIR}/visualizations/"*.png 2>/dev/null | wc -l)
 [ "$N_VIZ" -gt 0 ] && echo "  ✓ visualizations/  (${N_VIZ} 个 PNG)"
 
 # ---------- 6. 从目录名 + test.log 解析指标 ----------
-EPOCHS=$(echo "$TRAIN_DIR_NAME" | grep -oP 'epo\K[0-9]+' || true)
+# 全部用 awk 解析（不依赖 grep -P / PCRE，避免 locale 问题）
+EPOCHS=$(echo "$TRAIN_DIR_NAME" | awk 'match($0, /epo[0-9]+/) { print substr($0, RSTART+3, RLENGTH-3) }' || true)
 [ -z "$EPOCHS" ] && EPOCHS="150"
 
 TL="${EXP_DIR}/logs/test.log"
 if [ -f "$TL" ]; then
-    MEAN_DICE=$(grep -oP 'Testing performance in best val model: mean_dice : \K[0-9.]+' "$TL" | head -1)
-    MEAN_HD95=$(grep -oP 'mean_hd95 : \K[0-9.]+' "$TL" | head -1)
+    MEAN_DICE=$(awk '/Testing performance in best val model: mean_dice :/ { s=$0; sub(/.*mean_dice : /,"",s); sub(/ mean_hd95.*/,"",s); print s }' "$TL" | tail -1)
+    MEAN_HD95=$(awk '/Testing performance in best val model: mean_dice :/ { s=$0; sub(/.*mean_hd95 : /,"",s); print s }' "$TL" | tail -1)
 fi
 [ -z "$MEAN_DICE" ] && MEAN_DICE="N/A"
 [ -z "$MEAN_HD95" ] && MEAN_HD95="N/A"
 
-# 各器官：从 test.log 解析你的 Dice/HD95，论文值固定
-ORGAN_CN=("主动脉" "胆囊" "左肾" "右肾" "肝" "胃" "脾" "胰")
-PAPER_DICE=(0.875 0.698 0.841 0.867 0.950 0.832 0.918 0.776)
+# 各器官：awk 单遍解析所有 "Mean class N" 行（内容提取，不受时间戳前缀/字段偏移影响）
 ROWS=""
-SUM_YOUR=""
-N_ROWS=0
 if [ -f "$TL" ]; then
-    for i in $(seq 1 8); do
-        NAME="${i} (${ORGAN_CN[$((i-1))]})"
-        PAPER="${PAPER_DICE[$((i-1))]}"
-        LINE=$(grep "Mean class ${i} " "$TL" | tail -1)
-        YOUR=$(echo "$LINE" | grep -oP 'mean_dice \K[0-9.]+' || true)
-        HD=$(echo "$LINE" | grep -oP 'mean_hd95 \K[0-9.]+' || true)
-        if [ -n "$YOUR" ]; then
-            DIFF=$(awk -v a="$YOUR" -v b="$PAPER" 'BEGIN{printf "%.3f", a-b}')
-            ROWS+=$(printf '| %s | %s | %s | %s | %s |\n' "$NAME" "$YOUR" "$PAPER" "$DIFF" "$HD")
-            SUM_YOUR+=" $YOUR"
-            N_ROWS=$((N_ROWS + 1))
-        else
-            ROWS+=$(printf '| %s | N/A | %s | N/A | N/A |\n' "$NAME" "$PAPER")
-        fi
-    done
+    ROWS=$(awk '
+        /Mean class [1-9] mean_dice/ {
+            s=$0; sub(/.*Mean class /,"",s); sub(/ .*/,"",s); cls=s
+            s=$0; sub(/.*mean_dice /,"",s);  sub(/ .*/,"",s); dice=s
+            s=$0; sub(/.*mean_hd95 /,"",s);  sub(/ .*/,"",s); hd=s
+            names["1"]="主动脉"; names["2"]="胆囊"; names["3"]="左肾"; names["4"]="右肾"
+            names["5"]="肝";     names["6"]="胃";   names["7"]="脾";   names["8"]="胰"
+            papers["1"]=0.875; papers["2"]=0.698; papers["3"]=0.841; papers["4"]=0.867
+            papers["5"]=0.950; papers["6"]=0.832; papers["7"]=0.918; papers["8"]=0.776
+            diff = dice - papers[cls]
+            printf "| %s (%s) | %.6f | %.3f | %+.3f | %.6f |\n", cls, names[cls], dice, papers[cls], diff, hd
+        }' "$TL")
+    N_ROWS=$(echo -n "$ROWS" | grep -c . || true)
+    echo "  ✓ 解析到 ${N_ROWS:-0} 个器官行"
 fi
 # 用 test.log 里的 mean_dice 直接作为平均行
 [ -n "$MEAN_DICE" ] && MEAN_ROW=$(printf '| **平均** | **%s** | **0.842** | **N/A** | **%s** |' "$MEAN_DICE" "$MEAN_HD95")
